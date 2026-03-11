@@ -5,7 +5,6 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY evaluator.py .
-COPY knowledge_base/ ./knowledge_base/
+COPY . .
 
 CMD ["python", "-u", "evaluator.py"]
