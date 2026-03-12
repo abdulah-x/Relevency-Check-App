@@ -43,6 +43,17 @@ def create_relevancy_email_html(title, platform, matches):
                 f"</td></tr>"
             )
 
+        gaps = ev.get("low_score_reasons", [])
+        gaps_html = ""
+        if gaps:
+            gaps_list = "".join(f"<li style='margin-bottom:4px;color:#991b1b;'>{_esc(g)}</li>" for g in gaps)
+            gaps_html = f"""
+            <div style="background:#fef2f2;padding:12px 20px;border-bottom:1px solid #fee2e2;">
+              <div style="font-size:11px;font-weight:bold;color:#991b1b;text-transform:uppercase;
+                    letter-spacing:1px;margin-bottom:6px;">Gaps / Reasons for Lower Score</div>
+              <ul style="margin:0;padding-left:18px;">{gaps_list}</ul>
+            </div>"""
+
         consultant_blocks += f"""
         <div style="margin-bottom:28px;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
           <div style="background:#1e3a5f;padding:14px 20px;">
@@ -55,6 +66,7 @@ def create_relevancy_email_html(title, platform, matches):
                   letter-spacing:1px;margin-bottom:8px;">Why this matches</div>
             <ul style="margin:0;padding-left:18px;">{reasons_html}</ul>
           </div>
+          {gaps_html}
           <div>
             <div style="padding:10px 20px 6px;font-size:11px;font-weight:bold;color:#6b7280;
                   text-transform:uppercase;letter-spacing:1px;background:#fff;">Top 5 Relevant PARs</div>
