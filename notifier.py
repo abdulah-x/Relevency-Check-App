@@ -43,7 +43,7 @@ def create_relevancy_email_html(title, platform, matches):
                 f"</td></tr>"
             )
 
-        gaps = ev.get("low_score_reasons", [])
+        gaps = ev.get("low_score_reasons", []) if score < MIN_SCORE else []
         gaps_html = ""
         if gaps:
             gaps_list = "".join(f"<li style='margin-bottom:4px;color:#991b1b;'>{_esc(g)}</li>" for g in gaps)

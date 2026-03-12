@@ -35,7 +35,9 @@ Description:
 
 {consultant_sections}
 
-Evaluate how relevant this project is for each consultant based on their PAR (Project, Action, Result) library.
+IMPORTANT: Read EVERY PAR entry in each consultant's PAR LIBRARY carefully before evaluating.
+Your job is to identify which specific PARs (from the actual text provided above) are most relevant to THIS specific project JD.
+The top_pars must change for every different project JD — they must reflect the actual content of the PAR library.
 
 Return ONLY a valid JSON object — no markdown, no explanation, no code fences:
 {{
@@ -44,18 +46,18 @@ Return ONLY a valid JSON object — no markdown, no explanation, no code fences:
       "consultant": "Brendi",
       "score": 0,
       "match_reasons": ["reason 1", "reason 2", "reason 3"],
-      "low_score_reasons": ["if score < 70, list specific gaps/missing skills here"],
+      "low_score_reasons": ["only if score < 70: list specific gaps here"],
       "top_pars": [
-        {{"rank": 1, "par_text": "brief PAR summary", "relevancy_explanation": "why this PAR is relevant"}},
+        {{"rank": 1, "par_text": "COPY the exact project/PAR title or first sentence directly from the consultant's PAR LIBRARY above", "relevancy_explanation": "why this specific PAR is relevant to THIS project JD"}},
         {{"rank": 2, "par_text": "...", "relevancy_explanation": "..."}},
         {{"rank": 3, "par_text": "...", "relevancy_explanation": "..."}},
         {{"rank": 4, "par_text": "...", "relevancy_explanation": "..."}},
         {{"rank": 5, "par_text": "...", "relevancy_explanation": "..."}}
       ]
     }},
-    {{ "consultant": "Claireee", ... }},
-    {{ "consultant": "Jack", ... }},
-    {{ "consultant": "Richu", ... }}
+    {{ "consultant": "Claireee", "score": 0, "match_reasons": [], "low_score_reasons": [], "top_pars": [] }},
+    {{ "consultant": "Jack", "score": 0, "match_reasons": [], "low_score_reasons": [], "top_pars": [] }},
+    {{ "consultant": "Richu", "score": 0, "match_reasons": [], "low_score_reasons": [], "top_pars": [] }}
   ]
 }}
 
@@ -67,11 +69,12 @@ Scoring guide:
 
 Rules:
 - score must be an integer between 0 and 100
-- provide exactly 3 match_reasons per consultant (highlighting alignment)
-- low_score_reasons: IF score < 70, provide 2-3 specific reasons WHY the match is low (e.g. missing skills, unrelated industry). if score >= 70, this can be an empty array.
-- provide exactly 5 top_pars per consultant, ranked by relevancy (rank 1 = most relevant)
-- par_text should be a concise one-sentence summary of what the consultant did
-- relevancy_explanation should explain specifically why that PAR relates to this JD"""
+- provide exactly 3 match_reasons per consultant (highlighting alignment with THIS project)
+- low_score_reasons: ONLY if score < 70, list 2-3 specific reasons (missing skills, wrong industry etc). If score >= 70, set this to an empty array [].
+- provide exactly 5 top_pars per consultant — these MUST be real PAR entries from the library text provided above, not invented summaries
+- par_text: copy the project name or opening sentence of the PAR entry directly from the consultant's PAR LIBRARY — do NOT paraphrase or invent content
+- relevancy_explanation: explain specifically why that particular PAR entry relates to THIS specific project JD
+- The top_pars MUST differ between consultants and MUST reflect the actual PAR library content provided"""
 
     print("  🤖 Calling Claude Haiku (1 call, all 4 consultants)...")
 
