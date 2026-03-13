@@ -39,12 +39,16 @@ def main():
         return
 
     # Heartbeat to Slack to confirm connection
-    print("📡 Sending Slack heartbeat...")
-    send_slack_approval("System Multi-Module Heartbeat", "CORE", [{
-        "consultant": "System Check",
-        "score": 100,
-        "match_reasons": ["Evaluator started successfully on Railway", "Slack connection established"],
-        "project_jd": "N/A"
+    print("📡 Sending Final Integration Heartbeat...")
+    send_slack_approval("Final Integration Test", "CORE", [{
+        "consultant": "Integration-Bot",
+        "score": 95,
+        "match_reasons": [
+            "Railway web service is ONLINE",
+            "Slack Interactivity is CONFIGURED",
+            "Ready for end-to-end verification"
+        ],
+        "project_jd": "This is a simulated project description for the final integration test. Clicking Approve will generate a real test document."
     }])
 
     check_count = 0
