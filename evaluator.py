@@ -1,5 +1,6 @@
 import time
 import sys
+import os
 from datetime import datetime
 
 from config import MIN_SCORE, CHECK_INTERVAL, TEST_MODE, PKT, SEND_TEST_EMAILS
