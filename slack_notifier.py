@@ -14,6 +14,12 @@ load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN")
 SLACK_CHANNEL   = os.getenv("SLACK_CHANNEL", "#project-approvals")
 
+print(f"DEBUG: SLACK_CHANNEL is '{SLACK_CHANNEL}'")
+if SLACK_BOT_TOKEN:
+    print(f"DEBUG: SLACK_BOT_TOKEN is set (starts with {SLACK_BOT_TOKEN[:10]}...)")
+else:
+    print("DEBUG: SLACK_BOT_TOKEN is MISSING")
+
 
 def send_slack_approval(project_title: str, platform: str, matches: list):
     """
@@ -24,6 +30,8 @@ def send_slack_approval(project_title: str, platform: str, matches: list):
     if not SLACK_BOT_TOKEN:
         print("  ⚠️  SLACK_BOT_TOKEN not set — skipping Slack notification.")
         return
+
+    print(f"DEBUG: Preparing Slack messages for {len(matches)} matches...")
 
     try:
         from slack_sdk import WebClient
