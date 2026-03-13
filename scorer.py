@@ -82,7 +82,7 @@ Rules:
         try:
             # Using the original model name from the user's codebase
             response = client.messages.create(
-                model="claude-haiku-4-5",
+                model="claude-3-haiku-20240307",
                 max_tokens=4096,
                 messages=[{"role": "user", "content": prompt}],
             )
@@ -97,7 +97,17 @@ Rules:
 
             # Validate and sanitize
             for ev in evaluations:
-                ev["score"] = max(0, min(100, int(ev.get("score", 0))))
+                score_val = ev.get("score", 0)
+                if isinstance(score_val, str):
+                    # Extract digits if it's a string like "85%"
+                    digits = re.findall(r"\d+", score_val)
+                    score_val = int(digits[0]) if digits else 0
+                
+                try:
+                    ev["score"] = max(0, min(100, int(score_val or 0)))
+                except:
+                    ev["score"] = 0
+
                 ev["top_pars"] = (ev.get("top_pars") or [])[:5]
                 ev["match_reasons"] = (ev.get("match_reasons") or [])[:3]
                 ev["low_score_reasons"] = (ev.get("low_score_reasons") or [])[:3]

@@ -112,7 +112,8 @@ def main():
 
                         evaluations = score_project(title, description, par_libraries)
                         if not evaluations:
-                            print("  ❌ Scoring failed — skipping")
+                            print("  ❌ Scoring failed — logging failure to DB")
+                            log_evaluation(title, platform, [{"consultant": "SYSTEM", "score": 0, "match_reasons": ["AI SCORING FAILED"]}])
                             continue
 
                         scores_str = ", ".join(f"{e['consultant']}: {e['score']}%" for e in evaluations)
