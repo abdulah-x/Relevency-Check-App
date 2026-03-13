@@ -8,6 +8,7 @@ from watcher import fetch_new_project_emails
 from extractor import extract_jd
 from scorer import score_project
 from notifier import send_relevancy_email
+from slack_notifier import send_slack_approval
 from db_logger import log_evaluation, log_below_threshold
 
 
@@ -76,8 +77,12 @@ def main():
 
                         matches = [e for e in evaluations if e["score"] >= MIN_SCORE]
                         if matches:
-                            print(f"  🎯 {len(matches)} consultant(s) ≥{MIN_SCORE}% — sending email")
+                            # Inject the JD into each match so Slack button can carry it
+                            for m in matches:
+                                m["project_jd"] = description
+                            print(f"  🎯 {len(matches)} consultant(s) ≥{MIN_SCORE}% — sending email + Slack")
                             send_relevancy_email(title, platform, matches)
+                            send_slack_approval(title, platform, matches)
                         else:
                             print(f"  ⏭️  No matches ≥{MIN_SCORE}% — no email sent")
 
