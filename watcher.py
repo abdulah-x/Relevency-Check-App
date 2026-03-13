@@ -53,26 +53,38 @@ def fetch_new_project_emails():
             raw = msg_data[0][1]
             msg = email_lib.message_from_bytes(raw)
 
-            from_addr = (msg.get("From", "") or "").lower()
-            if WATCH_FROM_EMAILS and not any(addr in from_addr for addr in WATCH_FROM_EMAILS):
-                continue
-
             # Decode subject
             subject = ""
+            import email.header
             for part, enc in email.header.decode_header(msg.get("Subject", "")):
                 if isinstance(part, bytes):
                     subject += part.decode(enc or "utf-8", errors="replace")
                 else:
                     subject += str(part)
 
-            # Only process project alert emails
+            from_addr = (msg.get("From", "") or "").lower()
+            print(f"    🔍 Inspecting: {subject[:70]} (from: {from_addr})")
+
+            # Sender Filter Check
+            if WATCH_FROM_EMAILS:
+                matched_sender = any(addr in from_addr for addr in WATCH_FROM_EMAILS)
+                if not matched_sender:
+                    print(f"      ⏭️  Skipping sender (not in WATCH_FROM_EMAILS: {WATCH_FROM_EMAILS})")
+                    continue
+            
+            # Subject Filter Check
             is_project = (
                 "🔔" in subject
                 or "btg" in subject.lower()
                 or "catalant" in subject.lower()
+                or "project" in subject.lower()
+                or "match" in subject.lower()
+                or "new solicitation" in subject.lower()
             )
+            
             if not is_project:
-                continue  # leave unread — not our email
+                print("      ⏭️  Skipping subject (doesn't match project keywords)")
+                continue
 
             # Extract HTML body
             html_body = None
