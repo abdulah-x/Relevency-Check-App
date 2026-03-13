@@ -42,20 +42,53 @@ def send_slack_approval(project_title: str, platform: str, matches: list):
 
     client = WebClient(token=SLACK_BOT_TOKEN)
 
-    for ev in matches:
+    # -------------------------------------------------------------------------
+    # MONGODB HANDOFF (The "Locker")
+    # -------------------------------------------------------------------------
+    lookup_ids = []
+    try:
+        from pymongo import MongoClient
+        mongo_uri = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
+        db_client = MongoClient(mongo_uri)
+        db = db_client.get_database()  # uses default from URI
+        approvals_col = db["pending_approvals"]
+        
+        for ev in matches:
+            # Save the full "Key" data to MongoDB
+            doc = {
+                "project_title":   project_title,
+                "project_jd":      ev.get("project_jd", ""),
+                "consultant_name": ev.get("consultant", "Unknown"),
+                "top_pars":        ev.get("top_pars", []),
+                "platform":        platform,
+                "created_at":      os.getenv("PKT_TIME_STRING") or "" # Not strictly needed but helpful
+            }
+            res = approvals_col.insert_one(doc)
+            lookup_ids.append(str(res.inserted_id))
+            
+    except Exception as e:
+        print(f"  ❌ MongoDB Handoff Error: {e}")
+        # If Mongo fails, we fallback to the old way (truncated) for safety
+        lookup_ids = [None] * len(matches)
+
+    for i, ev in enumerate(matches):
         consultant_name = ev.get("consultant", "Unknown")
         score           = ev.get("score", 0)
         match_reasons   = ev.get("match_reasons", [])
-        top_pars        = ev.get("top_pars", [])
-        project_jd      = ev.get("project_jd", "")
-
-        # Encode button payload — the Listener will unpack this
-        button_value = json.dumps({
-            "project_title":   project_title,
-            "project_jd":      project_jd,
-            "consultant_name": consultant_name,
-            "top_pars":        top_pars,
-        })
+        
+        lookup_id = lookup_ids[i]
+        
+        if lookup_id:
+            # The "Key" approach (Small, safe payload)
+            button_value = json.dumps({"lookup_id": lookup_id})
+        else:
+            # Fallback to truncated payload if Mongo is down
+            button_value = json.dumps({
+                "project_title":   project_title[:50],
+                "project_jd":      ev.get("project_jd", "")[:200],
+                "consultant_name": consultant_name,
+                "top_pars":        ev.get("top_pars", [])[:2],
+            })
 
         score_emoji = "🟢" if score >= 90 else ("🟡" if score >= 70 else "🔴")
         reasons_text = "\n".join(f"• {r}" for r in match_reasons[:3])
