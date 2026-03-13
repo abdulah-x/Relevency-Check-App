@@ -80,6 +80,13 @@ def send_slack_approval(project_title: str, platform: str, matches: list):
                         "style": "primary",
                         "action_id": "approve_pitch",
                         "value": button_value,
+                    },
+                    {
+                        "type": "button",
+                        "text": {"type": "plain_text", "text": "❌ Dismiss"},
+                        "style": "danger",
+                        "action_id": "dismiss_pitch",
+                        "value": project_title,
                     }
                 ]
             }
