@@ -13,12 +13,32 @@ from db_logger import log_evaluation, log_below_threshold
 
 
 def main():
-    print(">>> EVALUATOR STARTING UP...")
-    print("=" * 50)
-    print("🎯 Project Relevancy Evaluator")
-    print("=" * 50)
+    # Force unbuffered output so logs appear instantly on Railway
+    import functools
+    global print
+    print = functools.partial(print, flush=True)
 
-    from config import IMAP_EMAIL, SENDER_EMAIL, RECIPIENT_EMAILS, HEARTBEAT_INTERVAL
+    print(">>> EVALUATOR STARTING UP...", flush=True)
+    print("=" * 50, flush=True)
+    print("🎯 Project Relevancy Evaluator", flush=True)
+    print("=" * 50, flush=True)
+
+    from config import IMAP_EMAIL, SENDER_EMAIL, RECIPIENT_EMAILS, HEARTBEAT_INTERVAL, SLACK_BOT_TOKEN, ANTHROPIC_API_KEY
+    
+    # CRITICAL VARIABLE CHECK
+    missing = []
+    if not SLACK_BOT_TOKEN: missing.append("SLACK_BOT_TOKEN")
+    if not ANTHROPIC_API_KEY: missing.append("ANTHROPIC_API_KEY")
+    if not IMAP_EMAIL: missing.append("IMAP_EMAIL")
+    if not RECIPIENT_EMAILS: missing.append("RECIPIENT_EMAILS")
+    
+    if missing:
+        print(f"❌ CRITICAL ERROR: The following variables are MISSING in Railway: {', '.join(missing)}")
+        print("Please add them to the Variables tab in Railway and redeploy.")
+        # We continue so we can at least see the other logs
+    else:
+        print("✅ All critical variables detected.")
+
     print(f"  Watching inbox : {IMAP_EMAIL}")
     print(f"  Monitor sender : {SENDER_EMAIL}")
     print(f"  Min score      : {MIN_SCORE}%")
