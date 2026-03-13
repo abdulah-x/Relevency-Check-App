@@ -8,15 +8,37 @@ from watcher import fetch_new_project_emails
 from extractor import extract_jd
 from scorer import score_project
 from notifier import send_relevancy_email
+from slack_notifier import send_slack_approval
 from db_logger import log_evaluation, log_below_threshold
 
 
 def main():
-    print("=" * 50)
-    print("🎯 Project Relevancy Evaluator")
-    print("=" * 50)
+    # Force unbuffered output so logs appear instantly on Railway
+    import functools
+    global print
+    print = functools.partial(print, flush=True)
 
-    from config import IMAP_EMAIL, SENDER_EMAIL, RECIPIENT_EMAILS, HEARTBEAT_INTERVAL
+    print(">>> EVALUATOR STARTING UP...", flush=True)
+    print("=" * 50, flush=True)
+    print("🎯 Project Relevancy Evaluator", flush=True)
+    print("=" * 50, flush=True)
+
+    from config import IMAP_EMAIL, SENDER_EMAIL, RECIPIENT_EMAILS, HEARTBEAT_INTERVAL, SLACK_BOT_TOKEN, ANTHROPIC_API_KEY
+    
+    # CRITICAL VARIABLE CHECK
+    missing = []
+    if not SLACK_BOT_TOKEN: missing.append("SLACK_BOT_TOKEN")
+    if not ANTHROPIC_API_KEY: missing.append("ANTHROPIC_API_KEY")
+    if not IMAP_EMAIL: missing.append("IMAP_EMAIL")
+    if not RECIPIENT_EMAILS: missing.append("RECIPIENT_EMAILS")
+    
+    if missing:
+        print(f"❌ CRITICAL ERROR: The following variables are MISSING in Railway: {', '.join(missing)}")
+        print("Please add them to the Variables tab in Railway and redeploy.")
+        # We continue so we can at least see the other logs
+    else:
+        print("✅ All critical variables detected.")
+
     print(f"  Watching inbox : {IMAP_EMAIL}")
     print(f"  Monitor sender : {SENDER_EMAIL}")
     print(f"  Min score      : {MIN_SCORE}%")
@@ -35,6 +57,19 @@ def main():
     if TEST_MODE:
         run_test_scenario(par_libraries)
         return
+
+    # Heartbeat to Slack to confirm connection
+    print("📡 Sending Final Integration Heartbeat...")
+    send_slack_approval("Final Integration Test", "CORE", [{
+        "consultant": "Integration-Bot",
+        "score": 95,
+        "match_reasons": [
+            "Railway web service is ONLINE",
+            "Slack Interactivity is CONFIGURED",
+            "Ready for end-to-end verification"
+        ],
+        "project_jd": "This is a simulated project description for the final integration test. Clicking Approve will generate a real test document."
+    }])
 
     check_count = 0
     while True:
@@ -76,8 +111,12 @@ def main():
 
                         matches = [e for e in evaluations if e["score"] >= MIN_SCORE]
                         if matches:
-                            print(f"  🎯 {len(matches)} consultant(s) ≥{MIN_SCORE}% — sending email")
+                            # Inject the JD into each match so Slack button can carry it
+                            for m in matches:
+                                m["project_jd"] = description
+                            print(f"  🎯 {len(matches)} consultant(s) ≥{MIN_SCORE}% — sending email + Slack")
                             send_relevancy_email(title, platform, matches)
+                            send_slack_approval(title, platform, matches)
                         else:
                             print(f"  ⏭️  No matches ≥{MIN_SCORE}% — no email sent")
 
