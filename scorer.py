@@ -76,13 +76,13 @@ Rules:
 - relevancy_explanation: explain specifically why that particular PAR entry relates to THIS specific project JD
 - The top_pars MUST differ between consultants and MUST reflect the actual PAR library content provided"""
 
-    print("  🤖 Calling Claude Haiku (1 call, all 4 consultants)...")
+    print("  🤖 Calling Claude 3.5 Haiku (1 call, all 4 consultants)...")
 
     for attempt in range(3):
         try:
-            # Using the original model name from the user's codebase
+            # Using the latest Claude 3.5 Haiku model
             response = client.messages.create(
-                model="claude-3-haiku-20240307",
+                model="claude-3-5-haiku-20241022",
                 max_tokens=4096,
                 messages=[{"role": "user", "content": prompt}],
             )
