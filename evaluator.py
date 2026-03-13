@@ -59,7 +59,7 @@ def main():
         return
 
     # Heartbeat to Slack to confirm connection
-    print("📡 Sending Final Integration Heartbeat...")
+    print("📡 Sending Final Integration Heartbeat...", flush=True)
     send_slack_approval("Final Integration Test", "CORE", [{
         "consultant": "Integration-Bot",
         "score": 95,
@@ -68,7 +68,15 @@ def main():
             "Slack Interactivity is CONFIGURED",
             "Ready for end-to-end verification"
         ],
-        "project_jd": "This is a simulated project description for the final integration test. Clicking Approve will generate a real test document."
+        "project_jd": "This is a simulated project description for the final integration test. Clicking Approve will generate a real test document.",
+        "top_pars": [
+            {
+                "par_text": "Project A: Successfully implemented a global commercial operating model across 12 markets, improving forecast accuracy by 15%."
+            },
+            {
+                "par_text": "Project B: Led a multi-region ERP transformation, harmonizing data across CRM and finance systems using Databricks."
+            }
+        ]
     }])
 
     check_count = 0
