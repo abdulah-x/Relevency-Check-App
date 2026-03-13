@@ -31,6 +31,7 @@ def main():
     if not ANTHROPIC_API_KEY: missing.append("ANTHROPIC_API_KEY")
     if not IMAP_EMAIL: missing.append("IMAP_EMAIL")
     if not RECIPIENT_EMAILS: missing.append("RECIPIENT_EMAILS")
+    if not os.getenv("MONGO_URI"): missing.append("MONGO_URI")
     
     if missing:
         print(f"❌ CRITICAL ERROR: The following variables are MISSING in Railway: {', '.join(missing)}")

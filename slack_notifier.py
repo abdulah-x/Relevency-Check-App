@@ -134,7 +134,20 @@ def send_slack_approval(project_title: str, platform: str, matches: list):
         ]
 
         try:
-            client.chat_postMessage(channel=SLACK_CHANNEL, blocks=blocks, text=f"New match: {project_title}")
-            print(f"  📣 Slack message sent for {consultant_name} ({score}%)")
+            print(f"DEBUG: Attempting chat_postMessage for {consultant_name} to {SLACK_CHANNEL}...")
+            response = client.chat_postMessage(
+                channel=SLACK_CHANNEL, 
+                blocks=blocks, 
+                text=f"New match: {project_title}"
+            )
+            if response.get("ok"):
+                print(f"  📣 Slack message sent SUCCESSFULLY for {consultant_name} ({score}%)")
+            else:
+                print(f"  ❌ Slack message FAILED for {consultant_name}: {response.get('error')}")
+
         except SlackApiError as e:
-            print(f"  ❌ Slack API error: {e.response['error']}")
+            print(f"  ❌ Slack API Error for {consultant_name}: {e.response['error']}")
+            # Debug: print the first block to see if it looks okay
+            print(f"DEBUG: Failed blocks (sample): {json.dumps(blocks[0], indent=2)}")
+        except Exception as e:
+            print(f"  ❌ Unexpected Slack Error for {consultant_name}: {e}")
