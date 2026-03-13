@@ -60,6 +60,7 @@ def send_slack_approval(project_title: str, platform: str, matches: list):
                 "project_title":   project_title,
                 "project_jd":      ev.get("project_jd", ""),
                 "consultant_name": ev.get("consultant", "Unknown"),
+                "score":           ev.get("score", 0),
                 "top_pars":        ev.get("top_pars", []),
                 "platform":        platform,
                 "created_at":      os.getenv("PKT_TIME_STRING") or "" # Not strictly needed but helpful
