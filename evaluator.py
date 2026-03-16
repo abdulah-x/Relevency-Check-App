@@ -10,7 +10,7 @@ from extractor import extract_jd
 from scorer import score_project
 from notifier import send_relevancy_email
 from slack_notifier import send_slack_approval
-from db_logger import log_evaluation, log_below_threshold
+from db_logger import log_evaluation
 
 
 def main():
@@ -131,9 +131,6 @@ def main():
                             print(f"  ⏭️  No matches ≥{MIN_SCORE}% — no email sent")
 
                         log_evaluation(title, platform, evaluations)
-                        low_relevancy = [e for e in evaluations if e.get("score", 0) < MIN_SCORE]
-                        if low_relevancy:
-                            log_below_threshold(title, platform, low_relevancy)
                     
                     except Exception as e:
                         print(f"  ⚠️  Error processing email {uid}: {e}")

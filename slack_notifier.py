@@ -51,11 +51,12 @@ def send_slack_approval(project_title: str, platform: str, matches: list):
         mongo_uri = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
         db_client = MongoClient(mongo_uri)
         # Use a specific database name to avoid "No default database" error
-        db = db_client["evaluator_db"] 
+        db = db_client["office_monitor"] 
         approvals_col = db["pending_approvals"]
         
         for ev in matches:
-            # Save the full "Key" data to MongoDB
+            # Save the full "Key" data to MongoDB with status tracking
+            from datetime import datetime, timezone
             doc = {
                 "project_title":   project_title,
                 "project_jd":      ev.get("project_jd", ""),
@@ -63,7 +64,9 @@ def send_slack_approval(project_title: str, platform: str, matches: list):
                 "score":           ev.get("score", 0),
                 "top_pars":        ev.get("top_pars", []),
                 "platform":        platform,
-                "created_at":      os.getenv("PKT_TIME_STRING") or "" # Not strictly needed but helpful
+                "status":          "pending",
+                "created_at":      datetime.now(timezone.utc),
+                "actioned_at":     None,
             }
             res = approvals_col.insert_one(doc)
             lookup_ids.append(str(res.inserted_id))
@@ -89,7 +92,7 @@ def send_slack_approval(project_title: str, platform: str, matches: list):
                 "project_title":   project_title[:50],
                 "project_jd":      ev.get("project_jd", "")[:200],
                 "consultant_name": consultant_name,
-                "top_pars":        ev.get("top_pars", [])[:2],
+                "top_pars":        ev.get("top_pars", [])[:5],
             })
 
         score_emoji = "🟢" if score >= 90 else ("🟡" if score >= 70 else "🔴")

@@ -63,16 +63,16 @@ Return ONLY a valid JSON object — no markdown, no explanation, no code fences:
 
 Scoring guide:
 - 90-100: Near-perfect match — consultant has done nearly identical work
-- 70-89:  Strong match — clear overlap in domain, skills, and seniority level
-- 50-69:  Moderate match — some relevant experience but notable gaps
+- 80-89:  Strong match — clear overlap in domain, skills, and seniority level
+- 50-79:  Moderate match — some relevant experience but notable gaps
 - 0-49:   Weak match — limited or unrelated experience
 
 Rules:
 - score must be an integer between 0 and 100
-- provide exactly 3 match_reasons per consultant (highlighting alignment with THIS project)
-- low_score_reasons: ONLY if score < 70, list 2-3 specific reasons (missing skills, wrong industry etc). If score >= 70, set this to an empty array [].
-- provide exactly 5 top_pars per consultant — these MUST be real PAR entries from the library text provided above, not invented summaries
-- par_text: copy the project name or opening sentence of the PAR entry directly from the consultant's PAR LIBRARY — do NOT paraphrase or invent content
+- provide exactly 3 match_reasons per consultant (brief phrases highlighting alignment with THIS project)
+- top_pars: ONLY if score >= 80 — provide exactly 5 top PARs, selected from the actual PAR LIBRARY text above. If score < 80, set top_pars to an empty array []
+- low_score_reasons: ONLY if score < 80 — list 2-3 specific reasons why the score is low (missing skills, wrong industry, seniority mismatch, etc). If score >= 80, set low_score_reasons to an empty array []
+- par_text: MUST be copied verbatim — copy the project name or opening sentence of the PAR entry DIRECTLY from the consultant's PAR LIBRARY — do NOT paraphrase or invent content
 - relevancy_explanation: explain specifically why that particular PAR entry relates to THIS specific project JD
 - The top_pars MUST differ between consultants and MUST reflect the actual PAR library content provided"""
 
@@ -108,9 +108,17 @@ Rules:
                 except:
                     ev["score"] = 0
 
-                ev["top_pars"] = (ev.get("top_pars") or [])[:5]
+                # Strip top_pars from low scorers and low_score_reasons from high scorers
+                # to enforce the schema contract at the source
+                MIN = 80
+                if ev["score"] >= MIN:
+                    ev["top_pars"] = (ev.get("top_pars") or [])[:5]
+                    ev["low_score_reasons"] = []  # not needed for high scorers
+                else:
+                    ev["top_pars"] = []           # do not store top_pars for low scorers
+                    ev["low_score_reasons"] = (ev.get("low_score_reasons") or [])[:3]
+
                 ev["match_reasons"] = (ev.get("match_reasons") or [])[:3]
-                ev["low_score_reasons"] = (ev.get("low_score_reasons") or [])[:3]
             print(f"  ✅ Scored {len(evaluations)} consultant(s)")
             return evaluations
 

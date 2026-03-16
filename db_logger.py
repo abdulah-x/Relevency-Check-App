@@ -1,112 +1,66 @@
 from datetime import datetime
+import re
 from pymongo import MongoClient
-from config import MONGO_URI, PKT
+from config import MONGO_URI, PKT, MIN_SCORE
 
 _client = None
 _collection = None
-_below_threshold_collection = None
-
 
 def _get_collection():
     global _client, _collection
     if _collection is None:
         _client = MongoClient(MONGO_URI)
-        _collection = _client["office_monitor"]["project_evaluations"]
+        _collection = _client["office_monitor"]["evaluations"]
     return _collection
 
 
-def _get_below_threshold_collection():
-    global _client, _below_threshold_collection
-    if _below_threshold_collection is None:
-        _client = MongoClient(MONGO_URI) if _client is None else _client
-        _below_threshold_collection = _client["office_monitor"]["low_relevancy_evaluations"]
-    return _below_threshold_collection
+def _make_project_id(title: str) -> str:
+    """Generate a stable project_id slug from the title for cross-collection linking."""
+    return re.sub(r'[^a-z0-9]+', '-', title.lower()).strip('-')[:80]
 
 
-def log_evaluation(title, platform, evaluations):
+def log_evaluation(title, platform, evaluations, project_id: str = None):
     """
-    Save a project + all consultant scores to MongoDB.
-
-    Document shape:
-    {
-        "title":         "Interim CFO / Finance Transformation",
-        "platform":      "BTG",
-        "evaluated_at":  <datetime PKT>,
-        "evaluations": [
-            {
-                "consultant":   "Richu",
-                "score":        85,
-                "match_reasons": [...],
-                "top_pars":     [...]
-            },
-            ...
-        ],
-        "matched_count": 2   # consultants >= MIN_SCORE
-    }
+    Save a project + all consultant scores to MongoDB in one unified document.
+    project_id links back to the `projects` collection.
     """
-    from config import MIN_SCORE
 
-    high_relevancy = [e for e in evaluations if e.get("score", 0) >= MIN_SCORE]
-    low_relevancy = [e for e in evaluations if e.get("score", 0) < MIN_SCORE]
+    # Use provided project_id or derive one from the title
+    pid = project_id or _make_project_id(title)
+
+    # Process evaluations to include the email_sent flag
+    processed_evals = []
+    for ev in evaluations:
+        score = ev.get("score", 0)
+        email_sent = score >= MIN_SCORE
+
+        processed_ev = {
+            "consultant":    ev.get("consultant", "Unknown"),
+            "score":         score,
+            "email_sent":    email_sent,
+            "match_reasons": ev.get("match_reasons", [])
+        }
+
+        if email_sent:
+            processed_ev["top_pars"] = ev.get("top_pars", [])
+        else:
+            processed_ev["low_score_reasons"] = ev.get("low_score_reasons", [])
+
+        processed_evals.append(processed_ev)
 
     doc = {
-        "title":         title,
-        "platform":      platform,
-        "evaluated_at":  datetime.now(PKT),
-        "evaluations":   evaluations,
-        "matched_count": len(high_relevancy),
-        "below_threshold_count": len(low_relevancy),
-        "matched_consultants": [e.get("consultant") for e in high_relevancy],
-        "below_threshold_consultants": [e.get("consultant") for e in low_relevancy],
-        "below_threshold_evaluations": low_relevancy,
+        "project_id":        pid,           # FK → projects.project_id
+        "title":             title,
+        "platform":          platform,
+        "evaluated_at":      datetime.now(PKT),
+        "consultant_scores": processed_evals,
     }
 
     try:
         col = _get_collection()
         result = col.insert_one(doc)
-        print(f"  💾 Saved to DB — id: {result.inserted_id}")
+        print(f"  💾 Saved to evaluations — id: {result.inserted_id}")
         return str(result.inserted_id)
     except Exception as e:
         print(f"  ⚠️  DB save failed: {e}")
-        return None
-
-
-def log_below_threshold(title, platform, below_threshold_evaluations):
-    """
-    Save only consultants with < MIN_SCORE to dedicated low-relevancy collection.
-
-    Document shape:
-    {
-        "title":       "Interim CFO / Finance Transformation",
-        "platform":    "BTG",
-        "evaluated_at": <datetime PKT>,
-        "consultants": [
-            {
-                "consultant":       "Jack",
-                "score":            45,
-                "match_reasons":    [...],
-                "top_pars":         [...]
-            },
-            ...
-        ]
-    }
-    """
-    if not below_threshold_evaluations:
-        return None  # no low-relevancy consultants, skip
-
-    doc = {
-        "title":       title,
-        "platform":    platform,
-        "evaluated_at": datetime.now(PKT),
-        "consultants": below_threshold_evaluations,
-        "count":       len(below_threshold_evaluations),
-    }
-
-    try:
-        col = _get_below_threshold_collection()
-        result = col.insert_one(doc)
-        print(f"  📊 Saved {len(below_threshold_evaluations)} low-relevancy consultant(s) to DB")
-        return str(result.inserted_id)
-    except Exception as e:
-        print(f"  ⚠️  Low-relevancy DB save failed: {e}")
         return None
