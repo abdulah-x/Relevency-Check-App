@@ -60,23 +60,9 @@ def main():
         run_test_scenario(par_libraries)
         return
 
-    # Heartbeat to Slack to confirm connection (User requested to keep this)
-    print("📡 Sending System Heartbeat...", flush=True)
-    send_slack_approval("System Heartbeat (Live)", "CORE", [{
-        "consultant": "Heartbeat-Bot",
-        "score": 100,
-        "match_reasons": [
-            "Railway monitoring is ACTIVE",
-            "IMAP watcher is SEARCHING for projects",
-            "Slack integration is FUNCTIONAL"
-        ],
-        "project_jd": "This is a simulated project description for the system heartbeat. Clicking Approve will generate a test document to verify the full pipeline.",
-        "top_pars": [
-            {
-                "par_text": "Project Heartbeat: Successfully maintained system uptime and Slack connectivity across multiple deployment cycles."
-            }
-        ]
-    }])
+    # User requested to remove Slack heartbeat to keep channel clean.
+    # We still print to logs for Railway monitoring.
+    print("📡 Evaluator is ONLINE and monitoring...")
 
     print("✅ System ready. Entering production monitoring loop...")
 
