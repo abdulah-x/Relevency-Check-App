@@ -64,3 +64,16 @@ def log_evaluation(title, platform, evaluations, project_id: str = None):
     except Exception as e:
         print(f"  ⚠️  DB save failed: {e}")
         return None
+def log_heartbeat():
+    """Update a heartbeat record in MongoDB to show the service is alive."""
+    try:
+        from datetime import timezone
+        col = _get_collection().database["heartbeats"]
+        col.update_one(
+            {"service": "ai_evaluator"},
+            {"$set": {"status": "online", "last_pulse": datetime.now(timezone.utc)}},
+            upsert=True
+        )
+        print("  💓 Evaluator Heartbeat sent to DB")
+    except Exception as e:
+        print(f"  ⚠️ Heartbeat log failed: {e}")

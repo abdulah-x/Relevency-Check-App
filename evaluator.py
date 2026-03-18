@@ -10,7 +10,7 @@ from extractor import extract_jd
 from scorer import score_project
 from notifier import send_relevancy_email
 from slack_notifier import send_slack_approval
-from db_logger import log_evaluation
+from db_logger import log_evaluation, log_heartbeat
 
 
 def main():
@@ -77,6 +77,7 @@ def main():
 
             print(f"🔄 Check #{check_count} — {datetime.now(PKT).strftime('%H:%M:%S')} PKT")
 
+            log_heartbeat()
             emails = fetch_new_project_emails()
 
             if not emails:

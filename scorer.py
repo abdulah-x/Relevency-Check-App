@@ -5,10 +5,50 @@ import anthropic
 from config import ANTHROPIC_API_KEY, CONSULTANTS
 
 
+def get_active_prompt():
+    """Fetch the latest prompt logic from MongoDB."""
+    try:
+        from db_logger import _get_collection
+        db = _get_collection().database
+        config = db["system_config"].find_one({"key": "active_relevancy_prompt"})
+        if config and config.get("value"):
+            return config["value"]
+    except Exception as e:
+        print(f"  ⚠️ Failed to fetch prompt from DB, using fallback: {e}")
+    
+    # Fallback to the original version if DB is down or empty
+    return """You are an expert consultant-project matching engine.
+
+PROJECT JD:
+Title: {title}
+Description:
+{description}
+
+{consultant_sections}
+
+IMPORTANT: Read EVERY PAR entry in each consultant's PAR LIBRARY carefully before evaluating.
+Your job is to identify which specific PARs are most relevant to THIS specific project JD.
+
+Return ONLY a valid JSON object:
+{
+  "evaluations": [
+    {
+      "consultant": "Brendi",
+      "score": 0,
+      "match_reasons": ["reason 1", "reason 2", "reason 3"],
+      "low_score_reasons": [],
+      "top_pars": []
+    },
+    { "consultant": "Claireee", "score": 0, "match_reasons": [], "low_score_reasons": [], "top_pars": [] },
+    { "consultant": "Jack", "score": 0, "match_reasons": [], "low_score_reasons": [], "top_pars": [] },
+    { "consultant": "Richu", "score": 0, "match_reasons": [], "low_score_reasons": [], "top_pars": [] }
+  ]
+}"""
+
 def score_project(title, description, par_libraries):
     """
-    Send JD + all 4 PAR libraries to Claude Haiku in one call.
-    Returns list of evaluation dicts with keys: consultant, score, match_reasons, top_pars.
+    Send JD + all 4 PAR libraries to Claude in one call.
+    Returns list of evaluation dicts.
     """
     if not ANTHROPIC_API_KEY:
         print("  ❌ Anthropic API Key not found in config")
@@ -19,70 +59,22 @@ def score_project(title, description, par_libraries):
     consultant_sections = ""
     for name in CONSULTANTS:
         sep = "=" * 60
-        consultant_sections += (
-            f"\n\n{sep}\n"
-            f"CONSULTANT: {name}\n"
-            f"PAR LIBRARY:\n{par_libraries[name]}\n"
-            f"{sep}"
-        )
+        consultant_sections += f"\n\n{sep}\nCONSULTANT: {name}\nPAR LIBRARY:\n{par_libraries[name]}\n{sep}"
 
-    prompt = f"""You are an expert consultant-project matching engine.
-
-PROJECT JD:
-Title: {title}
-Description:
-{description}
-
-{consultant_sections}
-
-IMPORTANT: Read EVERY PAR entry in each consultant's PAR LIBRARY carefully before evaluating.
-Your job is to identify which specific PARs (from the actual text provided above) are most relevant to THIS specific project JD.
-The top_pars must change for every different project JD — they must reflect the actual content of the PAR library.
-
-Return ONLY a valid JSON object — no markdown, no explanation, no code fences:
-{{
-  "evaluations": [
-    {{
-      "consultant": "Brendi",
-      "score": 0,
-      "match_reasons": ["reason 1", "reason 2", "reason 3"],
-      "low_score_reasons": ["only if score < 70: list specific gaps here"],
-      "top_pars": [
-        {{"rank": 1, "par_text": "COPY the exact project/PAR title or first sentence directly from the consultant's PAR LIBRARY above", "relevancy_explanation": "why this specific PAR is relevant to THIS project JD"}},
-        {{"rank": 2, "par_text": "...", "relevancy_explanation": "..."}},
-        {{"rank": 3, "par_text": "...", "relevancy_explanation": "..."}},
-        {{"rank": 4, "par_text": "...", "relevancy_explanation": "..."}},
-        {{"rank": 5, "par_text": "...", "relevancy_explanation": "..."}}
-      ]
-    }},
-    {{ "consultant": "Claireee", "score": 0, "match_reasons": [], "low_score_reasons": [], "top_pars": [] }},
-    {{ "consultant": "Jack", "score": 0, "match_reasons": [], "low_score_reasons": [], "top_pars": [] }},
-    {{ "consultant": "Richu", "score": 0, "match_reasons": [], "low_score_reasons": [], "top_pars": [] }}
-  ]
-}}
-
-Scoring guide:
-- 90-100: Near-perfect match — consultant has done nearly identical work
-- 80-89:  Strong match — clear overlap in domain, skills, and seniority level
-- 50-79:  Moderate match — some relevant experience but notable gaps
-- 0-49:   Weak match — limited or unrelated experience
-
-Rules:
-- score must be an integer between 0 and 100
-- provide exactly 3 match_reasons per consultant (brief phrases highlighting alignment with THIS project)
-- top_pars: ONLY if score >= 80 — provide exactly 5 top PARs, selected from the actual PAR LIBRARY text above. If score < 80, set top_pars to an empty array []
-- low_score_reasons: ONLY if score < 80 — list 2-3 specific reasons why the score is low (missing skills, wrong industry, seniority mismatch, etc). If score >= 80, set low_score_reasons to an empty array []
-- par_text: MUST be copied verbatim — copy the project name or opening sentence of the PAR entry DIRECTLY from the consultant's PAR LIBRARY — do NOT paraphrase or invent content
-- relevancy_explanation: explain specifically why that particular PAR entry relates to THIS specific project JD
-- The top_pars MUST differ between consultants and MUST reflect the actual PAR library content provided"""
+    # FETCH DYNAMIC PROMPT FROM DB
+    base_prompt = get_active_prompt()
+    
+    # Inject values safely using replace to avoid KeyError from JSON curly braces
+    prompt = base_prompt.replace("{title}", title)\
+                        .replace("{description}", description)\
+                        .replace("{consultant_sections}", consultant_sections)
 
     print("  🤖 Calling Claude 3.5 Haiku (1 call, all 4 consultants)...")
 
     for attempt in range(3):
         try:
-            # Using the latest Claude 3.5 Haiku model
             response = client.messages.create(
-                model="claude-3-5-sonnet-20241022",
+                model="claude-3-5-sonnet-20240620",
                 max_tokens=4096,
                 messages=[{"role": "user", "content": prompt}],
             )
